@@ -10,6 +10,19 @@
 \usepackage[normalem]{ulem}
 \usepackage{tikz}
 \usepackage{xcolor}
+\usepackage{centernot}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\makeatletter
+% Load the OT1 definitions for lmodern
+\input{ot1lmr.fd}
+% Change the definition for \OT1/lmr/m/n/<size>
+\DeclareFontShape{OT1}{lmr}{m}{n}%
+  {<-5.5>    rm-lmr5  <5.5-6.5> rm-lmr6
+   <6.5-7.5> rm-lmr7  <7.5-8.5> rm-lmr8
+   <8.5-9.5> rm-lmr9  <9.5->    rm-lmr10
+  }{}
 
 \renewcommand{\arraystretch}{1.25}
 \toplinje{Parallel LL Parsing}
@@ -46,8 +59,26 @@
 }
 
 \begin{frame}[hvid]
-    \frametitle{What did I do?}
+    \frametitle{Introduction}
+    \begin{itemize}
+        \item Parallel LL parser generator.
+        \item LLP$(q,k)$ $\subseteq$ LL$(k)$.
+        \item Pareas uses LLP$(1, 1)$.
+        \item Two mistakes in the paper that describes LLP.
+        \item Tested the parser generator thoroughly.
+    \end{itemize}
 \end{frame}
+
+% \begin{frame}[hvid]
+%     \frametitle{What will I be talking about.}
+%     \begin{itemize}
+%         \item How LLP parsing work.
+%         \item One of the problems found.
+%         \item Mistakes I made.
+%         \item The usefulness of the parser generator.
+%         \item A small example showing the parser generator being used.
+%     \end{itemize}
+% \end{frame}
 
 \begin{frame}[hvid,noframenumbering]
     \frametitle{LL parsing}
@@ -69,21 +100,34 @@
     \begin{align*}
         0)\:\: T' \to \:\: \vdash T \dashv
     \end{align*}
-    Now we parse the string ``$\vdash abc \dashv$'' instead.
-    \begin{center}
-        \begin{tabular}{c|c|c|c|c}
-            (\varepsilon ,\vdash) & $(\vdash, a)$ & $(a, b)$        & $(b, c)$             & $(c, \dashv)$               \\ \hline
-            $(T',T\dashv,0)$      & $(T, Tc, 2)$  & $(T, R, (1,4))$ & $(Rc,\varepsilon,3)$ & $(\dashv, \varepsilon, ())$
-        \end{tabular}
-    \end{center}
-    \onslide<2->{
-        \begin{enumerate}
-            \item Initial pushdown store.
-            \item Final pushdown store.
-            \item Left parse.
-        \end{enumerate}
+    Now we parse the string ``$\vdash abc \dashv$'' instead and a LLP table is needed.
+    \begin{enumerate}
+        \item Initial pushdown store.
+        \item Final pushdown store.
+        \item Left parse.
+    \end{enumerate}
+    \only<1>{{\footnotesize
+        \begin{center}
+            \begin{tabular}{c|c|c|c|c|c}
+                                & $\vdash$           & $a$        & $b$           & $c$                      & $\dashv$                      \\ \hline
+                $\varepsilon$ & $(T', T\dashv, 0)$ &            &               &                          &                               \\ \hline
+                $\vdash$      &                    & $(T,Tc,2)$ & $(T,R,(1,4))$ &                          & $(T\dashv,\varepsilon,(1,3))$ \\ \hline
+                $a$           &                    & $(T,Tc,2)$ & $(T,R,(1,4))$ & $(Tc,\varepsilon,(1,3))$ &                               \\ \hline
+                $b$           &                    &            & $(R,R, 4)$    & $(Rc,\varepsilon,3)$     & $(R\dashv,\varepsilon,3)$     \\ \hline
+                $c$           &                    &            &               & $(c,\varepsilon,())$     & $(\dashv,\varepsilon,())$
+            \end{tabular}
+        \end{center}
+    }}
+    \only<2>{
+        \begin{center}
+            \begin{tabular}{c|c|c|c|c}
+                (\varepsilon ,\vdash) & $(\vdash, a)$ & $(a, b)$        & $(b, c)$             & $(c, \dashv)$               \\ \hline
+                $(T',T\dashv,0)$      & $(T, Tc, 2)$  & $(T, R, (1,4))$ & $(Rc,\varepsilon,3)$ & $(\dashv, \varepsilon, ())$
+            \end{tabular}
+        \end{center}
     }
 \end{frame}
+
 \begin{frame}[hvid]
     \frametitle{LLP Parsing using Parallel Reduce}
     Use the \uline{associative} $\mathbf{glue}$ operation.
@@ -109,6 +153,7 @@
     \end{center}
     \vfill
 \end{frame}
+
 \begin{frame}[hvid]
     \frametitle{LLP Parsing using Bracket Matching}
     \begin{center}
@@ -133,24 +178,59 @@
 \end{frame}
 
 \begin{frame}[hvid]
-    \frametitle{The Problem}
+    \frametitle{Syntax Tree}
+    \begin{gather*}
+        1)\:\: E \to TE' \quad 2)\:\: E' \to +TE' \quad 3)\:\: E' \to \varepsilon \quad 4)\:\: T \to a \\[7pt]
+        (a+[a + a], E, ()) \vdash^* (\varepsilon, \varepsilon, (1, 4, 2, 5, 1, 4, 2, 4, 3, 3))
+    \end{gather*}
+    \begin{center}
+        \begin{tikzpicture}[
+                scale=0.90,
+                level distance=0.8cm,
+                level 1/.style={sibling distance=4cm},
+                level 2/.style={sibling distance=2cm},
+                level 3/.style={sibling distance=1cm},
+                level 4/.style={sibling distance=2cm},
+                level 5/.style={sibling distance=1cm}]
+            \node {$E_1$}
+                child {node {$T_4$}
+                    child {node {$a$}}
+                }
+                child {node {$E'_2$}
+                    child {node {$+$}}
+                    child {node {$T_5$}
+                        child {node {$[$}}
+                        child {node {$E_1$}
+                            child {node {$T_4$}
+                                child {node {$a$}}
+                            }
+                            child {node {$E'_2$}
+                                child {node {$+$}}
+                                child {node {$T_4$}
+                                child {node {$a$}}
+                                }    
+                                child {node {$E'_3$}
+                                    child {node {$\varepsilon$}}  
+                                }
+                            }
+                        }
+                        child {node {$]$}}
+                    }
+                    child {node {$E'_3$}
+                        child {node {$\varepsilon$}}  
+                    }
+                };
+        \end{tikzpicture}
+    \end{center}
+\end{frame}
+
+\begin{frame}[hvid]
+    \frametitle{LLP Table}
     To perform LLP parsing a LLP table is needed.
-        {\footnotesize
-            \begin{center}
-                \begin{tabular}{c|c|c|c|c|c}
-                                  & $\vdash$           & $a$        & $b$           & $c$                      & $\dashv$                      \\ \hline
-                    $\varepsilon$ & $(T', T\dashv, 0)$ &            &               &                          &                               \\ \hline
-                    $\vdash$      &                    & $(T,Tc,2)$ & $(T,R,(1,4))$ &                          & $(T\dashv,\varepsilon,(1,3))$ \\ \hline
-                    $a$           &                    & $(T,Tc,2)$ & $(T,R,(1,4))$ & $(Tc,\varepsilon,(1,3))$ &                               \\ \hline
-                    $b$           &                    &            & $(R,R, 4)$    & $(Rc,\varepsilon,3)$     & $(R\dashv,\varepsilon,3)$     \\ \hline
-                    $c$           &                    &            &               & $(c,\varepsilon,())$     & $(\dashv,\varepsilon,())$
-                \end{tabular}
-            \end{center}
-        }
     \begin{enumerate}
-        \item Find the initial pushdown store for a specific symbol for the given lookahead and lookback.
-        \item Compute final pushdown store by LL parsing the first symbol of the lookahead using the initial pushdown store.
-        \item Construct LLP configuration using the initial, final pushdown store and left parse.
+        \item Find the initial pushdown.
+        \item Parse the first symbol of the lookahead string to get the final pushdown store.
+        \item Construct LLP configuration.
     \end{enumerate}
 \end{frame}
 
@@ -161,18 +241,17 @@
     \begin{align*}
         0)\:\: S' \to \: \vdash S \dashv \qquad 1)\:\: A \to \varepsilon \qquad 2)\:\: S \to aAa \qquad 3)\:\: A \to a
     \end{align*}
-    \onslide<2->{
-        The PSLS (Prefix of a Suffix of a Leftmost Sentential) table. The grammar is LLP(2,2) since all the sets are singletons.
-        {\small
-        \begin{center}
-            \begin{tabular}{c|c|c|c}
-                           & $\dashv$     & $a\dashv$ & $aa$    \\ \hline
-                $\vdash$   &              &           & $\{S\}$ \\\hline
-                $\vdash a$ &              & $\{A\}$   & $\{A\}$ \\\hline
-                $aa$       & $\{\dashv\}$ & $\{a\}$   &
-            \end{tabular}
-        \end{center}
-        }
+    \onslide<2->{The PSLS (Prefix of a Suffix of a Leftmost Sentential) table. The grammar is LLP(2,2) since all the sets are singletons.
+    {\small
+    \begin{center}
+        \begin{tabular}{c|c|c|c}
+                        & $\dashv$     & $a\dashv$ & $aa$    \\ \hline
+            $\vdash$   &              &           & $\{S\}$ \\\hline
+            $\vdash a$ &              & $\{A\}$   & $\{A\}$ \\\hline
+            $aa$       & $\{\dashv\}$ & $\{a\}$   &
+        \end{tabular}
+    \end{center}
+    }
     }
     \onslide<3->{
         A small example of a PSLS value.
@@ -205,43 +284,49 @@
 
 \begin{frame}[hvid]
     \frametitle{The Problem}
-    Construct the LL(2) table.
-    \begin{center}
-        \begin{tabular}{c|c|c|c}
-                 & $\vdash a$                    & $aa$        & $a\dashv$           \\ \hline
-            $S'$ & $S' \to \:\: \vdash S \dashv$ &             &                     \\\hline
-            $S$  &                               & $S \to aAa$ &                     \\\hline
-            $A$  &                               & $A \to a$   & $A \to \varepsilon$
-        \end{tabular}
-    \end{center}
-    \onslide<2->{
-        Try LL parsing the initial pushdown store $\text{PSLS}(\vdash a, a \dashv) = \{A\}$.
-        \begin{align*}
-            (a \dashv, A, ()) \vdash (a \dashv, \varepsilon, 1)
-        \end{align*}
-        Due to this the final pushdown store cannot be determined since the first symbol can not be parsed.
+    The problem is due to the PSLS definition.
+    \only<1-2>{
+        {\footnotesize
+            \begin{align*}
+                \text{PSLS}(x, y) = \{ & \alpha : \exists S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta, \\
+                & w, u \in T^*, A, B \in N, \alpha, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x, \\
+                & \alpha \text{ is the shortest prefix of } B\gamma \text{ such that } {\color{purple} \text{FIRST}_1(y) \subseteq \text{FIRST}_1(\alpha)} \} \\
+                \cup \: \{ & a : \exists S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta, \\
+                & a = \text{FIRST}_1(y), w,u \in T^*, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x \}
+            \end{align*}
+        }
+    }
+    \only<2>{
+        \begin{gather*}
+            \text{FIRST}_1(y) \subseteq \text{FIRST}_1(\alpha) \\
+            \centernot{\implies} \\
+            (y, \text{PSLS}(x, y), ()) \vdash^* (b, \omega, \pi) \text{ where } ab = y, a \in T \text{ and } b \in T^*
+        \end{gather*}
     }
 \end{frame}
 
+
 \begin{frame}[hvid]
     \frametitle{The Problem}
-    The problem is due to the PSLS definition.
-    {\footnotesize
-        \begin{align*}
-            \text{PSLS}\only<3>{{\color{red} _k}}(x, y) = \{ & \alpha : \exists S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta, \\
-            & w, u \in T^*, A, B \in N, \alpha, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x, \\
-            & \alpha \text{ is the shortest prefix of } B\gamma \text{ such that } \only<1-2>{\text{FIRST}(y)} \only<3>{{\color{red} y}\:} \only<1-2>{\subseteq} \only<3>{{\color{red} \in}\:} \text{FIRST}\only<1-2>{_1}\only<3>{{\color{red} _k}}(\alpha) \} \\
-            \cup \: \{ & \only<1-2>{a} \only<3>{{\color{red} y}} : \exists S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta, \\
-            & a = \text{FIRST}_1(y), w,u \in T^*, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x \}
-        \end{align*}
+    \only<1-2>{
+        {\footnotesize
+            \begin{align*}
+                \text{PSLS}_{\color{red} k}(x, y) = \{ & \alpha : \exists S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta, \\
+                & w, u \in T^*, A, B \in N, \alpha, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x, \\
+                & \alpha \text{ is the shortest prefix of } B\gamma \text{ such that } {\color{red} y \in \text{FIRST}_k(\alpha)}\} \\
+                \cup \: \{ &  {\color{red} y} : \exists S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta, \\
+                & a = \text{FIRST}_1(y), w,u \in T^*, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x \}
+            \end{align*}
+        }
     }
     \only<2>{
-        The problem is.
-        \begin{gather*}
-            \text{PSLS}(x, y) \Rightarrow a \text{ where } ab = y \text{ and } a \in T \\
-            \text{does not imply} \\
-            (y, \text{PSLS}(x, y), ()) \vdash^* (b, \text{PSLS}(x, y), \pi)
-        \end{gather*}
+        \begin{itemize}
+            \item The time complexity is not impacted.
+            \item The problem of deriving too many symbols.
+        \end{itemize}
+        \begin{center}
+            ``Since the length of both $\alpha_i$ and $\omega_i$ is limited by some constant $z$ for the grammar, the time complexity is $O(z) = O(1)$.'' (Vagner, 2007)
+        \end{center}
     }
 \end{frame}
 
@@ -261,12 +346,84 @@
         \begin{align*}
             (a \dashv, Aa\dashv, ()) \vdash (a \dashv, a\dashv, 1) \vdash (\dashv, \dashv, 1)
         \end{align*}
-        Now the final pushdown store can be found.
+        Now the final pushdown store can be found. Resulting in the LLP configuration $(Aa\dashv, \dashv, 1)$.
     }
 \end{frame}
 
 \begin{frame}[hvid]
-    \frametitle{Applications}
+    \frametitle{The Problem}
+    The problem is due to the PSLS definition.
+    {\footnotesize
+        \begin{align*}
+            \text{PSLS}(x, y) = \{ & \alpha : \exists S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta, \\
+            & w, u, {\color{blue} y' \in T^*}, {\color{blue} a \in T}, A, B \in N, \alpha, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x, \\
+            & {\color{blue} y = ay'}, \alpha \text{ is the shortest prefix of } B\gamma \\ 
+            & \text{ such that } {\color{blue} (y, \alpha, ()) \vdash^* (y', \omega, \pi)}\} \\
+            \cup \: \{ &  {\color{blue} a} : \exists S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta, \\
+            & a = \text{FIRST}_1(y), w,u \in T^*, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x \}
+        \end{align*}
+    }
+    \onslide<2>{
+        \begin{enumerate}
+            \item Not tested.
+            \item It was created by Vladislav Vagner.
+        \end{enumerate}
+    }
 \end{frame}
+
+\begin{frame}[hvid]
+    \frametitle{The Problem}
+    Using Vladislav Vagners newer PSLS definition.
+    \begin{center}
+        \begin{tabular}{c|c|c|c}
+            & $\dashv$ & $a\dashv$ & $aa$ \\ \hline
+            $\vdash$ & & & $\{S\}$ \\\hline
+            $\vdash a$ & & $\{Aa\}$ & $\{A\}$ \\\hline
+            $aa$ & $\{\dashv\}$ & $\{a\}$ & 
+        \end{tabular}
+    \end{center}
+    Do LL parsing.
+    \begin{align*}
+        (a \dashv, Aa, ()) \vdash (a \dashv, a, 1) \vdash (\dashv, \varepsilon, 1)
+    \end{align*}
+\end{frame}
+
+\begin{frame}[hvid]
+    \frametitle{My Mistakes}
+    \begin{itemize}
+        \item The dictionaries are not surjective functions.
+        \onslide<2->{\item The property tested for is $\forall s \in T^* : \Pi(s) = \varphi(s)$.}
+        \onslide<3->{\item ``This changed definition would still work for LLP parsing.'' is conjecture.}
+        \onslide<4->{\item The stack and input string does not need to equal each other in the definition of $\vdash$.}
+        \onslide<5->{\item ``$\mathcal{M}_0(A) = \emptyset$ for all $A \in N' \backslash \{S\}$ and $\mathcal{M}_0(S) = \{\square^k\}$'' is the correct initial dictionary when constructing $\text{FOLLOW}_k$.}
+        \onslide<6->{\item $N'$ should be used in step 3. of the $\text{FOLLOW}_k$ algorithm.}
+        \onslide<7->{\item Algorithm 2.3 should use $v_j \in \text{FIRST}_k(\gamma)$ not $y \in \text{FIRST}_k(\gamma)$.}
+        \onslide<8->{\item When showing the infinite loop, $\text{FIRST}_k$ shoud be $\text{FIRST}_1$.}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[hvid]
+    \frametitle{Usefulness}
+    \begin{itemize}
+        \item Parsing large quantities of a formal language.
+        \begin{itemize}
+            \item JSON.
+            \onslide<2->{\item Large code bases in reproducible environments.}
+        \end{itemize}
+        \onslide<3->{\item The LLP grammar class is limited.}
+        \onslide<4->{\item I had trouble finding useful grammars that are LL$(k)$ grammars where $k > 1$. But extending the lookback is somewhat different to the lookahead. }
+        \onslide<5->{\item Parsing more complex grammars, an example is allowing ``$-$'' to mean both the binary and unary operation for numbers, while ignore parenthesis. When testing this such a grammar was found to be LLP(2, 1).}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[hvid]
+    \frametitle{A Little Example}
+    \vfill
+    \begin{center}
+        \textbf{A LISP parser}
+    \end{center}
+    \vfill
+\end{frame}
+
 
 \end{document}
