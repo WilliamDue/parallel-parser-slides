@@ -410,9 +410,10 @@
             \item JSON.
             \onslide<2->{\item Large code bases in reproducible environments.}
         \end{itemize}
-        \onslide<3->{\item The LLP grammar class is limited.}
+        \onslide<3->{\item The LLP grammar class is limited: problems with JSON, Lua, Regular Language. }
         \onslide<4->{\item I had trouble finding useful grammars that are LL$(k)$ grammars where $k > 1$. But extending the lookback is somewhat different to the lookahead. }
         \onslide<5->{\item Parsing more complex grammars, an example is allowing ``$-$'' to mean both the binary and unary operation for numbers, while ignore parenthesis. When testing this such a grammar was found to be LLP(2, 1).}
+        \onslide<6->{\item There exists a larger grammar class LLP$^*$ which can parse all regular languages and more of LL.}
     \end{itemize}
 \end{frame}
 
